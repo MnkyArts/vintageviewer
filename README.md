@@ -1,4 +1,5 @@
 # 🎮 Vintage Story Model Viewer
+![Vintage Story Model Viewer](https://i.imgur.com/b9BUEub.png)
 
 A specialized web viewer for previewing and customizing Vintage Story player character models, focusing on the Seraph (player character) model and its various customizable parts.
 
