@@ -63,7 +63,7 @@ Your assets should follow this structure:
 ```
 public/
   assets/
-    # Add your game folder here.
+    # Add your assets/game folder here.
     # Best practice: Include only the necessary directories:
     #   - game/shapes/entity/humanoid/
     #   - game/textures/blocks/
