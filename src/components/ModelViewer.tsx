@@ -501,206 +501,105 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ customization = {} }) => {
         const idx = faceIndex * 8;
         const rotation = face.rotation || 0;
 
-        // Special handling for faces with geometry rotation
-        const isUpDownFace = faceName === 'up' || faceName === 'down';
-        const hasGeometryRotation = element.rotationX !== undefined || element.rotationY !== undefined || element.rotationZ !== undefined;
-        const hasWindMode = face.windMode !== undefined;
-        
-        // Determine if we need to flip UVs based on face orientation and rotations
-        const shouldFlipX = hasWindMode && Array.isArray(face.windMode) && face.windMode[0] === -1;
-        const shouldFlipY = hasWindMode && Array.isArray(face.windMode) && face.windMode[1] === -1;
-        
-        // Get the actual UV coordinates based on flipping
+        const windMode = face.windMode;
+        const shouldFlipX = windMode && windMode[0] === -1;
+        const shouldFlipY = windMode && windMode[1] === -1;
+
+        // Calculate final UV coordinates based on windMode
         const finalUvX1 = shouldFlipX ? uvX2 : uvX1;
         const finalUvX2 = shouldFlipX ? uvX1 : uvX2;
         const finalUvY1 = shouldFlipY ? uvY2 : uvY1;
         const finalUvY2 = shouldFlipY ? uvY1 : uvY2;
 
-        if (isUpDownFace && hasGeometryRotation) {
-          // For up/down faces with geometry rotation
-          const isDownFace = faceName === 'down';
+        // Handle rotated faces
+        if (rotation === 90) {
+          if (element.rotationX !== undefined && Math.abs(element.rotationX) === 135) {
+            // Special case for h2-like elements (X rotation of 135 degrees)
+            uvs[idx] = finalUvX2;     uvs[idx + 1] = finalUvY1;
+            uvs[idx + 2] = finalUvX1; uvs[idx + 3] = finalUvY1;
+            uvs[idx + 4] = finalUvX2; uvs[idx + 5] = finalUvY2;
+            uvs[idx + 6] = finalUvX1; uvs[idx + 7] = finalUvY2;
+          } else if (element.rotationZ !== undefined && Math.abs(element.rotationZ) === 135) {
+            // Special case for h4-like elements (Z rotation of 135 degrees)
+            uvs[idx] = finalUvX1;     uvs[idx + 1] = finalUvY1;
+            uvs[idx + 2] = finalUvX2; uvs[idx + 3] = finalUvY1;
+            uvs[idx + 4] = finalUvX1; uvs[idx + 5] = finalUvY2;
+            uvs[idx + 6] = finalUvX2; uvs[idx + 7] = finalUvY2;
+          } else {
+            // Default 90-degree rotation
+            uvs[idx] = finalUvX1;     uvs[idx + 1] = finalUvY2;
+            uvs[idx + 2] = finalUvX1; uvs[idx + 3] = finalUvY1;
+            uvs[idx + 4] = finalUvX2; uvs[idx + 5] = finalUvY2;
+            uvs[idx + 6] = finalUvX2; uvs[idx + 7] = finalUvY1;
+          }
+        } else if (rotation === 180) {
+          uvs[idx] = finalUvX2;     uvs[idx + 1] = finalUvY2;
+          uvs[idx + 2] = finalUvX1; uvs[idx + 3] = finalUvY2;
+          uvs[idx + 4] = finalUvX2; uvs[idx + 5] = finalUvY1;
+          uvs[idx + 6] = finalUvX1; uvs[idx + 7] = finalUvY1;
+        } else if (rotation === 270) {
+          uvs[idx] = finalUvX2;     uvs[idx + 1] = finalUvY1;
+          uvs[idx + 2] = finalUvX2; uvs[idx + 3] = finalUvY2;
+          uvs[idx + 4] = finalUvX1; uvs[idx + 5] = finalUvY1;
+          uvs[idx + 6] = finalUvX1; uvs[idx + 7] = finalUvY2;
+        } else {
+          // No rotation
+          uvs[idx] = finalUvX1;     uvs[idx + 1] = finalUvY1;
+          uvs[idx + 2] = finalUvX2; uvs[idx + 3] = finalUvY1;
+          uvs[idx + 4] = finalUvX1; uvs[idx + 5] = finalUvY2;
+          uvs[idx + 6] = finalUvX2; uvs[idx + 7] = finalUvY2;
+        }
+
+        // Handle windMode for north faces
+        if (faceName === 'north' && face.windMode && Array.isArray(face.windMode) && face.windMode[0] === -1) {
+          // For north faces with windMode [-1,-1,-1,-1], we need to flip the UVs horizontally
+          uvs[idx] = uvX2;     uvs[idx + 1] = uvY1;
+          uvs[idx + 2] = uvX1; uvs[idx + 3] = uvY1;
+          uvs[idx + 4] = uvX2; uvs[idx + 5] = uvY2;
+          uvs[idx + 6] = uvX1; uvs[idx + 7] = uvY2;
+          return;
+        }
+
+        // Special handling for up/down faces with rotation
+        if ((faceName === 'up' || faceName === 'down') && rotation === 90) {
           const hasXRotation = element.rotationX !== undefined;
           const hasZRotation = element.rotationZ !== undefined;
+          const xRotation = element.rotationX || 0;
+          const zRotation = element.rotationZ || 0;
 
-          if (isDownFace && hasXRotation) {
-            // Special case for faces like h2 with X rotation
-            switch (rotation) {
-              case 90:
-                uvs[idx] = finalUvX2;     uvs[idx + 1] = finalUvY1;
-                uvs[idx + 2] = finalUvX2; uvs[idx + 3] = finalUvY2;
-                uvs[idx + 4] = finalUvX1; uvs[idx + 5] = finalUvY1;
-                uvs[idx + 6] = finalUvX1; uvs[idx + 7] = finalUvY2;
-                break;
-              case 180:
-                uvs[idx] = finalUvX2;     uvs[idx + 1] = finalUvY2;
-                uvs[idx + 2] = finalUvX1; uvs[idx + 3] = finalUvY2;
-                uvs[idx + 4] = finalUvX2; uvs[idx + 5] = finalUvY1;
-                uvs[idx + 6] = finalUvX1; uvs[idx + 7] = finalUvY1;
-                break;
-              case 270:
-                uvs[idx] = finalUvX1;     uvs[idx + 1] = finalUvY2;
-                uvs[idx + 2] = finalUvX1; uvs[idx + 3] = finalUvY1;
-                uvs[idx + 4] = finalUvX2; uvs[idx + 5] = finalUvY2;
-                uvs[idx + 6] = finalUvX2; uvs[idx + 7] = finalUvY1;
-                break;
-              default:
-                uvs[idx] = finalUvX1;     uvs[idx + 1] = finalUvY1;
-                uvs[idx + 2] = finalUvX2; uvs[idx + 3] = finalUvY1;
-                uvs[idx + 4] = finalUvX1; uvs[idx + 5] = finalUvY2;
-                uvs[idx + 6] = finalUvX2; uvs[idx + 7] = finalUvY2;
+          // For UpperFoot models specifically
+          if (hasXRotation && hasZRotation && Math.abs(zRotation) === 5) {
+            if (faceName === 'up') {
+              uvs[idx] = uvX1;     uvs[idx + 1] = uvY2;
+              uvs[idx + 2] = uvX1; uvs[idx + 3] = uvY1;
+              uvs[idx + 4] = uvX2; uvs[idx + 5] = uvY2;
+              uvs[idx + 6] = uvX2; uvs[idx + 7] = uvY1;
+            } else {
+              uvs[idx] = uvX2;     uvs[idx + 1] = uvY1;
+              uvs[idx + 2] = uvX2; uvs[idx + 3] = uvY2;
+              uvs[idx + 4] = uvX1; uvs[idx + 5] = uvY1;
+              uvs[idx + 6] = uvX1; uvs[idx + 7] = uvY2;
             }
-          } else if (hasZRotation) {
-            // Special case for faces like h3 and h4 with Z rotation
-            const zRotation = element.rotationZ || 0;
-            const isNegativeRotation = zRotation < 0;
-            const isLargeRotation = Math.abs(zRotation) > 90;
-            
-            // For Z rotations, we need to consider:
-            // 1. Whether it's an up or down face
-            // 2. Whether the Z rotation is negative
-            // 3. Whether the Z rotation is large (>90 degrees)
-            // 4. The UV rotation specified in the face
-            switch (rotation) {
-              case 90:
-                if (isDownFace) {
-                  if (isLargeRotation) {
-                    uvs[idx] = finalUvX1;     uvs[idx + 1] = finalUvY2;
-                    uvs[idx + 2] = finalUvX1; uvs[idx + 3] = finalUvY1;
-                    uvs[idx + 4] = finalUvX2; uvs[idx + 5] = finalUvY2;
-                    uvs[idx + 6] = finalUvX2; uvs[idx + 7] = finalUvY1;
-                  } else {
-                    uvs[idx] = finalUvX2;     uvs[idx + 1] = finalUvY1;
-                    uvs[idx + 2] = finalUvX2; uvs[idx + 3] = finalUvY2;
-                    uvs[idx + 4] = finalUvX1; uvs[idx + 5] = finalUvY1;
-                    uvs[idx + 6] = finalUvX1; uvs[idx + 7] = finalUvY2;
-                  }
-                } else {
-                  // Special case for h3-like faces (up face with small negative Z rotation)
-                  if (isNegativeRotation && !isLargeRotation) {
-                    uvs[idx] = finalUvX2;     uvs[idx + 1] = finalUvY2;
-                    uvs[idx + 2] = finalUvX2; uvs[idx + 3] = finalUvY1;
-                    uvs[idx + 4] = finalUvX1; uvs[idx + 5] = finalUvY2;
-                    uvs[idx + 6] = finalUvX1; uvs[idx + 7] = finalUvY1;
-                  } else if (isLargeRotation) {
-                    uvs[idx] = finalUvX2;     uvs[idx + 1] = finalUvY2;
-                    uvs[idx + 2] = finalUvX1; uvs[idx + 3] = finalUvY2;
-                    uvs[idx + 4] = finalUvX2; uvs[idx + 5] = finalUvY1;
-                    uvs[idx + 6] = finalUvX1; uvs[idx + 7] = finalUvY1;
-                  } else {
-                    uvs[idx] = finalUvX1;     uvs[idx + 1] = finalUvY1;
-                    uvs[idx + 2] = finalUvX2; uvs[idx + 3] = finalUvY1;
-                    uvs[idx + 4] = finalUvX1; uvs[idx + 5] = finalUvY2;
-                    uvs[idx + 6] = finalUvX2; uvs[idx + 7] = finalUvY2;
-                  }
-                }
-                break;
-              case 180:
-                if (isDownFace !== isNegativeRotation) {
-                  uvs[idx] = finalUvX1;     uvs[idx + 1] = finalUvY1;
-                  uvs[idx + 2] = finalUvX2; uvs[idx + 3] = finalUvY1;
-                  uvs[idx + 4] = finalUvX1; uvs[idx + 5] = finalUvY2;
-                  uvs[idx + 6] = finalUvX2; uvs[idx + 7] = finalUvY2;
-                } else {
-                  uvs[idx] = finalUvX2;     uvs[idx + 1] = finalUvY2;
-                  uvs[idx + 2] = finalUvX1; uvs[idx + 3] = finalUvY2;
-                  uvs[idx + 4] = finalUvX2; uvs[idx + 5] = finalUvY1;
-                  uvs[idx + 6] = finalUvX1; uvs[idx + 7] = finalUvY1;
-                }
-                break;
-              case 270:
-                if (isDownFace) {
-                  if (isLargeRotation) {
-                    uvs[idx] = finalUvX2;     uvs[idx + 1] = finalUvY1;
-                    uvs[idx + 2] = finalUvX2; uvs[idx + 3] = finalUvY2;
-                    uvs[idx + 4] = finalUvX1; uvs[idx + 5] = finalUvY1;
-                    uvs[idx + 6] = finalUvX1; uvs[idx + 7] = finalUvY2;
-                  } else {
-                    uvs[idx] = finalUvX1;     uvs[idx + 1] = finalUvY2;
-                    uvs[idx + 2] = finalUvX1; uvs[idx + 3] = finalUvY1;
-                    uvs[idx + 4] = finalUvX2; uvs[idx + 5] = finalUvY2;
-                    uvs[idx + 6] = finalUvX2; uvs[idx + 7] = finalUvY1;
-                  }
-                } else {
-                  if (isLargeRotation) {
-                    uvs[idx] = finalUvX1;     uvs[idx + 1] = finalUvY1;
-                    uvs[idx + 2] = finalUvX2; uvs[idx + 3] = finalUvY1;
-                    uvs[idx + 4] = finalUvX1; uvs[idx + 5] = finalUvY2;
-                    uvs[idx + 6] = finalUvX2; uvs[idx + 7] = finalUvY2;
-                  } else {
-                    uvs[idx] = finalUvX2;     uvs[idx + 1] = finalUvY2;
-                    uvs[idx + 2] = finalUvX1; uvs[idx + 3] = finalUvY2;
-                    uvs[idx + 4] = finalUvX2; uvs[idx + 5] = finalUvY1;
-                    uvs[idx + 6] = finalUvX1; uvs[idx + 7] = finalUvY1;
-                  }
-                }
-                break;
-              default:
-                if (isDownFace !== isNegativeRotation) {
-                  uvs[idx] = finalUvX2;     uvs[idx + 1] = finalUvY2;
-                  uvs[idx + 2] = finalUvX1; uvs[idx + 3] = finalUvY2;
-                  uvs[idx + 4] = finalUvX2; uvs[idx + 5] = finalUvY1;
-                  uvs[idx + 6] = finalUvX1; uvs[idx + 7] = finalUvY1;
-                } else {
-                  uvs[idx] = finalUvX1;     uvs[idx + 1] = finalUvY1;
-                  uvs[idx + 2] = finalUvX2; uvs[idx + 3] = finalUvY1;
-                  uvs[idx + 4] = finalUvX1; uvs[idx + 5] = finalUvY2;
-                  uvs[idx + 6] = finalUvX2; uvs[idx + 7] = finalUvY2;
-                }
-            }
-          } else {
-            // Default case for other rotated faces
-            switch (rotation) {
-              case 90:
-                uvs[idx] = finalUvX1;     uvs[idx + 1] = finalUvY2;
-                uvs[idx + 2] = finalUvX1; uvs[idx + 3] = finalUvY1;
-                uvs[idx + 4] = finalUvX2; uvs[idx + 5] = finalUvY2;
-                uvs[idx + 6] = finalUvX2; uvs[idx + 7] = finalUvY1;
-                break;
-              case 180:
-                uvs[idx] = finalUvX2;     uvs[idx + 1] = finalUvY2;
-                uvs[idx + 2] = finalUvX1; uvs[idx + 3] = finalUvY2;
-                uvs[idx + 4] = finalUvX2; uvs[idx + 5] = finalUvY1;
-                uvs[idx + 6] = finalUvX1; uvs[idx + 7] = finalUvY1;
-                break;
-              case 270:
-                uvs[idx] = finalUvX2;     uvs[idx + 1] = finalUvY1;
-                uvs[idx + 2] = finalUvX2; uvs[idx + 3] = finalUvY2;
-                uvs[idx + 4] = finalUvX1; uvs[idx + 5] = finalUvY1;
-                uvs[idx + 6] = finalUvX1; uvs[idx + 7] = finalUvY2;
-                break;
-              default:
-                uvs[idx] = finalUvX1;     uvs[idx + 1] = finalUvY1;
-                uvs[idx + 2] = finalUvX2; uvs[idx + 3] = finalUvY1;
-                uvs[idx + 4] = finalUvX1; uvs[idx + 5] = finalUvY2;
-                uvs[idx + 6] = finalUvX2; uvs[idx + 7] = finalUvY2;
-            }
+            return;
           }
-        } else {
-          // Standard UV mapping for other faces
-          switch (rotation) {
-            case 90:
-              uvs[idx] = finalUvX1;     uvs[idx + 1] = finalUvY2;
-              uvs[idx + 2] = finalUvX1; uvs[idx + 3] = finalUvY1;
-              uvs[idx + 4] = finalUvX2; uvs[idx + 5] = finalUvY2;
-              uvs[idx + 6] = finalUvX2; uvs[idx + 7] = finalUvY1;
-              break;
-            case 180:
-              uvs[idx] = finalUvX2;     uvs[idx + 1] = finalUvY2;
-              uvs[idx + 2] = finalUvX1; uvs[idx + 3] = finalUvY2;
-              uvs[idx + 4] = finalUvX2; uvs[idx + 5] = finalUvY1;
-              uvs[idx + 6] = finalUvX1; uvs[idx + 7] = finalUvY1;
-              break;
-            case 270:
-              uvs[idx] = finalUvX1;     uvs[idx + 1] = finalUvY2;
-              uvs[idx + 2] = finalUvX1; uvs[idx + 3] = finalUvY1;
-              uvs[idx + 4] = finalUvX2; uvs[idx + 5] = finalUvY2;
-              uvs[idx + 6] = finalUvX2; uvs[idx + 7] = finalUvY1;
-              break;
-            default:
-              uvs[idx] = finalUvX1;     uvs[idx + 1] = finalUvY1;
-              uvs[idx + 2] = finalUvX2; uvs[idx + 3] = finalUvY1;
-              uvs[idx + 4] = finalUvX1; uvs[idx + 5] = finalUvY2;
-              uvs[idx + 6] = finalUvX2; uvs[idx + 7] = finalUvY2;
+
+          // Special handling for h2/h4-like elements with windMode
+          if (face.windMode && Array.isArray(face.windMode) && face.windMode[0] === -1) {
+            if (Math.abs(xRotation) === 135) {
+              // h2-like elements
+              uvs[idx] = uvX2;     uvs[idx + 1] = uvY2;
+              uvs[idx + 2] = uvX1; uvs[idx + 3] = uvY2;
+              uvs[idx + 4] = uvX2; uvs[idx + 5] = uvY1;
+              uvs[idx + 6] = uvX1; uvs[idx + 7] = uvY1;
+              return;
+            } else if (Math.abs(zRotation) === 135) {
+              // h4-like elements
+              uvs[idx] = uvX2;     uvs[idx + 1] = uvY1;
+              uvs[idx + 2] = uvX2; uvs[idx + 3] = uvY2;
+              uvs[idx + 4] = uvX1; uvs[idx + 5] = uvY1;
+              uvs[idx + 6] = uvX1; uvs[idx + 7] = uvY2;
+              return;
+            }
           }
         }
       });
